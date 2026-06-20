@@ -867,14 +867,14 @@ function createLibraryControls(state) {
   const scoreInput = document.createElement("input");
   scoreInput.className = "input score-input";
   scoreInput.type = "number";
-  scoreInput.min = "0";
+  scoreInput.min = "1";
   scoreInput.max = "10";
   scoreInput.step = "1";
   scoreInput.inputMode = "numeric";
   scoreInput.placeholder = "Score";
   scoreInput.setAttribute("aria-label", "MAL score out of 10");
   scoreInput.value =
-    typeof state.libraryState?.score === "number"
+    typeof state.libraryState?.score === "number" && state.libraryState.score > 0
       ? String(state.libraryState.score)
       : "";
 
@@ -1070,7 +1070,7 @@ async function saveSettings() {
 
     await sendMessage(MESSAGE_TYPES.UPDATE_SETTINGS, {
       watchCompletionThresholdRatio: thresholdPercent / 100,
-      resumeSaveIntervalSeconds,
+      resumeSaveIntervalSeconds: saveIntervalSeconds,
       sync: {
         myAnimeListClientId: elements.malClientIdInput.value.trim(),
         myAnimeListClientSecret: elements.malClientSecretInput.value.trim(),
@@ -1607,11 +1607,11 @@ function formatOriginList(origins) {
 }
 
 function formatScore(score) {
-  return typeof score === "number" ? `Score ${score}/10` : "No score";
+  return typeof score === "number" && score > 0 ? `Score ${score}/10` : "No score";
 }
 
 function formatRawScore(score) {
-  return typeof score === "number" ? `${score}/10` : "None";
+  return typeof score === "number" && score > 0 ? `${score}/10` : "None";
 }
 
 function createSyncPayloadText(state) {
@@ -1697,11 +1697,11 @@ function parseOptionalScore(value) {
 
   const parsed = Number.parseInt(value, 10);
 
-  if (!Number.isInteger(parsed)) {
+  if (!Number.isInteger(parsed) || parsed <= 0) {
     return null;
   }
 
-  return Math.min(Math.max(parsed, 0), 10);
+  return Math.min(parsed, 10);
 }
 
 function formatDuration(seconds) {

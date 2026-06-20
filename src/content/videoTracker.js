@@ -193,7 +193,7 @@
       return;
     }
 
-    const payload = await createResumePayload(video);
+    const payload = await createResumePayload(video, reason);
     state.diagnostics.lastPayload = createDiagnosticPayload(payload);
 
     const savePromise = sendMessage(MESSAGE_TYPES.SAVE_RESUME_STATE, payload)
@@ -229,7 +229,7 @@
     }
 
     const duration = video.duration;
-    const position = video.currentTime;
+    const position = getVideoPosition(video, reason);
 
     if (!Number.isFinite(duration) || duration <= 0) {
       setSkipReason("VIDEO_DURATION_NOT_READY", { duration });
@@ -287,7 +287,7 @@
     return true;
   }
 
-  async function createResumePayload(video) {
+  async function createResumePayload(video, reason) {
     const pageUrl = getPageUrl();
     const pageContext = await getStoredPageContext(pageUrl);
     const rawTitle = getBestTitle(video, pageContext);
@@ -304,7 +304,7 @@
       siteOrigin,
       sourceTitle: pageContext?.sourceTitle ?? sourceTitle,
       episodeNumber,
-      positionSeconds: roundSeconds(video.currentTime),
+      positionSeconds: roundSeconds(getVideoPosition(video, reason)),
       durationSeconds: roundSeconds(video.duration),
       episodeUrl: pageUrl,
       frameUrl: location.href,
@@ -314,6 +314,18 @@
       titleCandidates: getTitleCandidates(video),
       referrerUrl: document.referrer || null,
     };
+  }
+
+  function getVideoPosition(video, reason) {
+    if (
+      reason === "ended" &&
+      Number.isFinite(video.duration) &&
+      video.duration > 0
+    ) {
+      return video.duration;
+    }
+
+    return video.currentTime;
   }
 
   function createInitialDiagnostics() {

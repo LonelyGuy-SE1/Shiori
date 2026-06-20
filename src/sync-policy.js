@@ -261,7 +261,13 @@ function normalizeScore(value) {
     return null;
   }
 
-  return Math.min(Math.max(Math.round(score), 0), 10);
+  const roundedScore = Math.round(score);
+
+  if (roundedScore <= 0) {
+    return null;
+  }
+
+  return Math.min(roundedScore, 10);
 }
 
 function normalizeMediaId(value) {

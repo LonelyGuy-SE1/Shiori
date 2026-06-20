@@ -48,7 +48,16 @@ export async function getSettings() {
     return structuredClone(DEFAULT_SETTINGS);
   }
 
-  return mergeSettings(DEFAULT_SETTINGS, settings);
+  const mergedSettings = mergeSettings(DEFAULT_SETTINGS, settings);
+  const validatedSettings = validateSettings(mergedSettings);
+
+  if (JSON.stringify(validatedSettings) !== JSON.stringify(settings)) {
+    await chrome.storage.local.set({
+      [SETTINGS_STORAGE_KEY]: validatedSettings,
+    });
+  }
+
+  return validatedSettings;
 }
 
 export async function updateSettings(partialSettings) {
@@ -103,10 +112,7 @@ export function validateSettings(settings) {
       DEFAULT_SETTINGS.sync.myAnimeList,
     ),
 
-    autoSyncMyAnimeList: toBoolean(
-      normalized.sync?.autoSyncMyAnimeList,
-      DEFAULT_SETTINGS.sync.autoSyncMyAnimeList,
-    ),
+    autoSyncMyAnimeList: true,
 
     myAnimeListClientId: toSafeString(
       normalized.sync?.myAnimeListClientId,
