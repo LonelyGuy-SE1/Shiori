@@ -30,19 +30,22 @@ Add screenshots here after capture.
 
 ### Library
 
-`TODO: screenshot of the Library tab with tracked shows and search.`
+<img width="439" height="605" alt="image" src="https://github.com/user-attachments/assets/706b499d-1d41-4980-be8e-372f7f9d8975" />
 
 ### Current Site
 
-`TODO: screenshot of the Site tab on a supported episode page.`
+Untracked Page:
+
+<img width="427" height="565" alt="image" src="https://github.com/user-attachments/assets/0b69eee6-5d2a-4ab7-b9c7-254afab2f528" />
+
+Tracked Page: 
+
+<img width="434" height="604" alt="image" src="https://github.com/user-attachments/assets/3005a06d-c600-4a65-be9a-fba0ea33ea87" />
 
 ### MyAnimeList Setup
 
-`TODO: screenshot of the MAL tab showing the redirect URL and connected state.`
+<img width="428" height="511" alt="image" src="https://github.com/user-attachments/assets/a031f4a1-2508-4b63-96a9-3f580a1dd514" />
 
-### Site Access
-
-`TODO: screenshot of Track this site and Track player frames flows.`
 
 ## Requirements
 
@@ -56,6 +59,9 @@ Add screenshots here after capture.
 1. Open `chrome://extensions`.
 2. Enable `Developer mode`.
 3. Select `Load unpacked`.
+
+<img width="1366" height="684" alt="image" src="https://github.com/user-attachments/assets/31becae5-d460-410d-b510-d3b368bd678d" />
+
 4. Choose the Shiori project folder, the folder containing `manifest.json`.
 5. Pin Shiori from the Chrome extensions menu if you want quick access.
 
@@ -71,6 +77,9 @@ https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world
 5. Create or edit a MyAnimeList API application:
    https://myanimelist.net/apiconfig
 6. Paste the Shiori redirect URL into the app's redirect URL field.
+
+<img width="430" height="504" alt="image" src="https://github.com/user-attachments/assets/e35f4620-b8b0-4c8c-bc07-6f2e3d422f2d" />
+
 7. Save the MAL application.
 8. Copy the MAL `Client ID`.
 9. Paste the `Client ID` into Shiori.
@@ -217,4 +226,6 @@ node --check src/settings.js
 
 After editing `manifest.json`, reload the unpacked extension from `chrome://extensions`.
 
+Note: This extension has only been tested on the Animepahe site.
 Btw crunchyroll is gay. Doesnt have Made in Abyss. And also, too many restrictions. :(
+
