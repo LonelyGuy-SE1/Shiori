@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Shiori</title>
+
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="../../assets/icons/SE116.png"
+    />
+
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <img
+            class="brand-icon"
+            src="../../assets/icons/SE148.png"
+            width="48"
+            height="48"
+            alt=""
+          />
+
+          <div class="brand-copy">
+            <p class="eyebrow">Shiori</p>
+            <h1>Anime progress</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <span id="malHeaderStatus" class="status-pill">MAL offline</span>
+
+          <button
+            id="refreshButton"
+            class="button button-ghost"
+            type="button"
+            aria-label="Refresh data"
+          >
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <section id="statusBanner" class="status-banner" hidden></section>
+
+      <nav class="tabs" aria-label="Shiori sections">
+        <button
+          class="tab-trigger"
+          type="button"
+          data-tab-target="libraryPanel"
+          data-state="active"
+        >
+          Library
+        </button>
+        <button
+          class="tab-trigger"
+          type="button"
+          data-tab-target="malPanel"
+          data-state="inactive"
+        >
+          MyAnimeList
+        </button>
+        <button
+          class="tab-trigger"
+          type="button"
+          data-tab-target="sitePanel"
+          data-state="inactive"
+        >
+          Site
+        </button>
+        <button
+          class="tab-trigger"
+          type="button"
+          data-tab-target="settingsPanel"
+          data-state="inactive"
+        >
+          Settings
+        </button>
+      </nav>
+
+      <section
+        id="libraryPanel"
+        class="tab-panel"
+        data-state="active"
+        aria-labelledby="libraryHeading"
+      >
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Tracked shows</p>
+            <h2 id="libraryHeading">Continue watching</h2>
+          </div>
+          <span id="resumeCount" class="metric-pill">0 saved</span>
+        </div>
+
+        <label class="library-search">
+          <span class="field-label">Search library</span>
+          <input
+            id="librarySearchInput"
+            class="input"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Search tracked shows"
+          />
+        </label>
+
+        <div id="resumeList" class="anime-list" aria-live="polite"></div>
+
+        <div id="emptyState" class="empty-state" hidden>
+          <h3>No progress saved yet</h3>
+          <p>Open a tracked episode and Shiori will save it here.</p>
+        </div>
+      </section>
+
+      <section
+        id="malPanel"
+        class="tab-panel"
+        data-state="inactive"
+        aria-labelledby="malHeading"
+      >
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Account sync</p>
+            <h2 id="malHeading">MyAnimeList</h2>
+          </div>
+          <span id="malStatusText" class="metric-pill">Disconnected</span>
+        </div>
+
+        <div class="form-grid">
+          <label class="field-row">
+            <span>Client ID</span>
+            <input
+              id="malClientIdInput"
+              class="input"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Paste MAL API Client ID"
+            />
+          </label>
+
+          <label class="field-row">
+            <span>Client Secret</span>
+            <input
+              id="malClientSecretInput"
+              class="input"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Optional for confidential MAL apps"
+            />
+          </label>
+
+          <label class="field-row">
+            <span>Redirect URL</span>
+            <input
+              id="malRedirectUriInput"
+              class="input mono-input"
+              type="text"
+              readonly
+              spellcheck="false"
+            />
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="malConnectButton" class="button button-primary" type="button">
+            Connect MAL
+          </button>
+
+          <button
+            id="malDisconnectButton"
+            class="button button-secondary"
+            type="button"
+          >
+            Disconnect
+          </button>
+        </div>
+      </section>
+
+      <section
+        id="sitePanel"
+        class="tab-panel"
+        data-state="inactive"
+        aria-labelledby="siteHeading"
+      >
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Current page</p>
+            <h2 id="siteHeading">Tracking access</h2>
+          </div>
+          <span id="currentSiteBadge" class="metric-pill">Off</span>
+        </div>
+
+        <div class="site-card">
+          <div>
+            <p class="field-label">Detected origin</p>
+            <p id="currentSiteHost" class="site-host">Unsupported site</p>
+          </div>
+
+          <button id="trackSiteButton" class="button button-primary" type="button">
+            Track this site
+          </button>
+        </div>
+
+        <div id="trackerDiagnostics" class="diagnostics-panel"></div>
+
+        <div id="currentPageMatches" class="site-matches"></div>
+      </section>
+
+      <section
+        id="settingsPanel"
+        class="tab-panel"
+        data-state="inactive"
+        aria-labelledby="settingsHeading"
+      >
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Preferences</p>
+            <h2 id="settingsHeading">Tracking settings</h2>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field-row">
+            <span>Completion threshold</span>
+            <input
+              id="completionThresholdInput"
+              class="input number-input"
+              type="number"
+              min="50"
+              max="99"
+              step="1"
+              inputmode="numeric"
+            />
+          </label>
+
+          <label class="field-row">
+            <span>Save interval</span>
+            <input
+              id="saveIntervalInput"
+              class="input number-input"
+              type="number"
+              min="3"
+              max="120"
+              step="1"
+              inputmode="numeric"
+            />
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="saveSettingsButton" class="button button-primary" type="button">
+            Save settings
+          </button>
+
+          <button
+            id="resetSettingsButton"
+            class="button button-secondary"
+            type="button"
+          >
+            Reset
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./popup.js" type="module"></script>
+  </body>
+</html>

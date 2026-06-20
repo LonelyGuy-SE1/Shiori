@@ -1,37 +1,45 @@
 {
-    "manifest_version":3,
-    "name": "Shiori",
-    "version":"0.1.0",
-    "description":"Track anime watch progress and sync it to MyAnimeList and AniList",
-    
-    "icons": {
-    "16": "assets/icons/SE116.jpg",
-    "48": "assets/icons/SE148.jpg",
-    "128": "assets/icons/SE1128.jpg"
-    },
-
-    "permissions":[
-        "storage",
-        "identity"
-    ],
-
-    "host_permissions":[
-        "https://api.myanimelist.net/*",
-        "https://myanimelist.net/*"   
-    ],
-
-    "backgorund":{
-        "service_worker":"src/background.js",
-        "type":"module"
-    },
-
-    "action":{
-        "default_title":"Shiori",
-        "default_popup":"src/popup/popup.html",
-            "default_icon": {
-            "16": "assets/icons/SE116.jpg",
-            "48": "assets/icons/SE148.jpg",
-            "128": "assets/icons/SE1128.jpg"
-        }
+  "manifest_version": 3,
+  "name": "Shiori",
+  "version": "0.1.0",
+  "description": "Track anime watch progress and sync watched episodes to MyAnimeList.",
+  "icons": {
+    "16": "assets/icons/SE116.png",
+    "32": "assets/icons/SE132.png",
+    "48": "assets/icons/SE148.png",
+    "128": "assets/icons/SE1128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "identity",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.myanimelist.net/*",
+    "https://api.jikan.moe/*",
+    "https://myanimelist.net/*",
+    "https://animepahe.com/*",
+    "https://animepahe.ch/*",
+    "https://animepahe.org/*",
+    "https://animepahe.pw/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Shiori",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/SE116.png",
+      "32": "assets/icons/SE132.png",
+      "48": "assets/icons/SE148.png",
+      "128": "assets/icons/SE1128.png"
     }
+  }
 }
