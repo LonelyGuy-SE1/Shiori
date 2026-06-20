@@ -961,6 +961,25 @@ async function enrichResumeStatesWithMyAnimeList(
     }));
   }
 
+  if (options.cacheOnly === true) {
+    return resumeStates.map((state) => {
+      const libraryState = normalizeAnimeLibraryState(
+        nextLibraryStates[state.resumeKey] ?? state.libraryState,
+      );
+
+      return {
+        ...state,
+        libraryState,
+        posterUrl: libraryState.coverUrl ?? state.posterUrl,
+        syncPlan: createSyncPlan(state, libraryState, null),
+        myAnimeList: {
+          connected: true,
+          candidates: [],
+        },
+      };
+    });
+  }
+
   const enrichedStates = [];
 
   for (const state of resumeStates.slice(0, limit)) {

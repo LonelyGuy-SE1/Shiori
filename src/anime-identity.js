@@ -88,10 +88,6 @@ export function createAnimeSearchQueries(...values) {
   );
 }
 
-export function isReliableAnimeTitle(value) {
-  return parseAnimeIdentity(value).reliable;
-}
-
 export function isInvalidAnimeTitle(value) {
   if (typeof value !== "string" || cleanWhitespace(value).length < 2) {
     return true;

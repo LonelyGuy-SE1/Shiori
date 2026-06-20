@@ -4,7 +4,6 @@
   --muted: #a1a1aa;
   --muted-foreground: #71717a;
   --card: #0b0b0c;
-  --card-foreground: #f8fafc;
   --popover: #111113;
   --border: #27272a;
   --input: #27272a;
@@ -14,7 +13,6 @@
   --secondary-foreground: #f4f4f5;
   --accent: rgba(249, 115, 22, 0.12);
   --accent-foreground: #fdba74;
-  --destructive: #ef4444;
   --ring: rgba(249, 115, 22, 0.42);
   --radius: 8px;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.48);

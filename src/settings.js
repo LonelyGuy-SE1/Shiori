@@ -17,15 +17,6 @@ const DEFAULT_SETTINGS = Object.freeze({
     saveWhilePaused: true,
     saveWhileWatching: true,
   },
-
-  ui: {
-    showAdvancedControls: false,
-    compactMode: false,
-  },
-
-  diagnostics: {
-    debugLogging: false,
-  },
 });
 
 const SETTING_LIMITS = Object.freeze({
@@ -142,25 +133,6 @@ export function validateSettings(settings) {
     saveWhileWatching: toBoolean(
       normalized.resume?.saveWhileWatching,
       DEFAULT_SETTINGS.resume.saveWhileWatching,
-    ),
-  };
-
-  normalized.ui = {
-    showAdvancedControls: toBoolean(
-      normalized.ui?.showAdvancedControls,
-      DEFAULT_SETTINGS.ui.showAdvancedControls,
-    ),
-
-    compactMode: toBoolean(
-      normalized.ui?.compactMode,
-      DEFAULT_SETTINGS.ui.compactMode,
-    ),
-  };
-
-  normalized.diagnostics = {
-    debugLogging: toBoolean(
-      normalized.diagnostics?.debugLogging,
-      DEFAULT_SETTINGS.diagnostics.debugLogging,
     ),
   };
 
