@@ -59,11 +59,11 @@ Tracked Page:
 1. Open `chrome://extensions`.
 2. Enable `Developer mode`.
 3. Select `Load unpacked`.
-4. 
+
 <img width="1366" height="684" alt="image" src="https://github.com/user-attachments/assets/31becae5-d460-410d-b510-d3b368bd678d" />
 
-5. Choose the Shiori project folder, the folder containing `manifest.json`.
-6. Pin Shiori from the Chrome extensions menu if you want quick access.
+4. Choose the Shiori project folder, the folder containing `manifest.json`.
+5. Pin Shiori from the Chrome extensions menu if you want quick access.
 
 Chrome's official unpacked extension flow uses `chrome://extensions`, Developer mode, and `Load unpacked`. See the Chrome getting started guide for the base browser flow:
 https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world
