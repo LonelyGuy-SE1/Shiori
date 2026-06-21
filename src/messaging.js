@@ -15,7 +15,7 @@ export async function sendMessage(type, payload = null) {
   return response.data;
 }
 
-export function createRemoteError(errorPayload) {
+function createRemoteError(errorPayload) {
   const error = new Error(
     errorPayload?.message ?? "Unknown Shiori background error.",
   );

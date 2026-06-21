@@ -96,7 +96,7 @@ export function isInvalidAnimeTitle(value) {
   return isRejectedTitle(cleanWhitespace(value));
 }
 
-export function normalizeSearchQuery(value) {
+function normalizeSearchQuery(value) {
   const query = cleanWhitespace(value)
     .replace(QUALITY_PATTERN, " ")
     .replace(RELEASE_TAG_PATTERN, " ");
@@ -212,12 +212,12 @@ function stripEpisodeSuffix(value, episodeNumber) {
   );
   const patterns = [
     new RegExp(
-      `(?:^|[-_\\s.])(?:episode|ep)\\.?\\s*0*${escapedEpisode}(?=$|[-_\\s.])`,
+      `(?:^|[-_\\s.])(?:episode|ep)\\.?\\s*0*${escapedEpisode}(?:v\\d+)?(?=$|[-_\\s.])`,
       "i",
     ),
-    new RegExp(`(?:^|[-_\\s.])s\\d{1,2}e0*${escapedEpisode}(?=$|[-_\\s.])`, "i"),
+    new RegExp(`(?:^|[-_\\s.])s\\d{1,2}e0*${escapedEpisode}(?:v\\d+)?(?=$|[-_\\s.])`, "i"),
     new RegExp(
-      `(?:[-_\\s.]+-[-_\\s.]+|[-_\\s.]+)0*${escapedEpisode}(?=[-_\\s.]*(?:online|\\d{3,4}p|subsplease|erai|web|bd|$))`,
+      `(?:[-_\\s.]+-[-_\\s.]+|[-_\\s.]+)0*${escapedEpisode}(?:v\\d+)?(?=[-_\\s.]*(?:online|\\d{3,4}p|subsplease|erai|web|bd|$))`,
       "i",
     ),
   ];
@@ -255,9 +255,9 @@ function normalizeAnimeTitle(value) {
 function extractEpisodeNumber(value) {
   const normalizedValue = safeDecode(value).replace(MEDIA_EXTENSION_PATTERN, "");
   const patterns = [
-    /(?:^|[^\p{L}\p{N}])(?:episode|ep)\.?\s*0*(\d{1,4})(?=$|[^\p{L}\p{N}])/iu,
-    /(?:^|[^\p{L}\p{N}])s\d{1,2}e0*(\d{1,4})(?=$|[^\p{L}\p{N}])/iu,
-    /(?:[-_\s.]+-[-_\s.]+|[-_\s.]+)0*(\d{1,4})(?=[-_\s.]*(?:online|\d{3,4}p|subsplease|erai|web|bd|$))/i,
+    /(?:^|[^\p{L}\p{N}])(?:episode|ep)\.?\s*0*(\d{1,4})(?:v\d+)?(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])s\d{1,2}e0*(\d{1,4})(?:v\d+)?(?=$|[^\p{L}\p{N}])/iu,
+    /(?:[-_\s.]+-[-_\s.]+|[-_\s.]+)0*(\d{1,4})(?:v\d+)?(?=[-_\s.]*(?:online|\d{3,4}p|subsplease|erai|web|bd|$))/i,
   ];
 
   for (const pattern of patterns) {

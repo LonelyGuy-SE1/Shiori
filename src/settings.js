@@ -82,7 +82,7 @@ export async function resetSettings() {
   return settings;
 }
 
-export function validateSettings(settings) {
+function validateSettings(settings) {
   const normalized = structuredClone(settings);
 
   normalized.watchCompletionThresholdRatio = clampNumber(

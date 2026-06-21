@@ -38,14 +38,13 @@ Untracked Page:
 
 <img width="427" height="565" alt="image" src="https://github.com/user-attachments/assets/0b69eee6-5d2a-4ab7-b9c7-254afab2f528" />
 
-Tracked Page: 
+Tracked Page:
 
 <img width="434" height="604" alt="image" src="https://github.com/user-attachments/assets/3005a06d-c600-4a65-be9a-fba0ea33ea87" />
 
 ### MyAnimeList Setup
 
 <img width="428" height="511" alt="image" src="https://github.com/user-attachments/assets/a031f4a1-2508-4b63-96a9-3f580a1dd514" />
-
 
 ## Requirements
 
@@ -225,7 +224,3 @@ node --check src/settings.js
 ```
 
 After editing `manifest.json`, reload the unpacked extension from `chrome://extensions`.
-
-Note: This extension has only been tested on the Animepahe site.
-Btw crunchyroll is gay. Doesnt have Made in Abyss. And also, too many restrictions. :(
-

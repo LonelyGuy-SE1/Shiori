@@ -1,4 +1,4 @@
-export const LIBRARY_STATUSES = Object.freeze({
+const LIBRARY_STATUSES = Object.freeze({
   UNKNOWN: "unknown",
   NOT_IN_LIST: "not_in_list",
   WATCHING: "watching",
@@ -6,7 +6,6 @@ export const LIBRARY_STATUSES = Object.freeze({
   ON_HOLD: "on_hold",
   DROPPED: "dropped",
   PLAN_TO_WATCH: "plan_to_watch",
-  REWATCHING: "rewatching",
 });
 
 export const LIBRARY_STATUS_OPTIONS = Object.freeze([
@@ -43,7 +42,6 @@ const MAL_STATUS_BY_LIBRARY_STATUS = Object.freeze({
   [LIBRARY_STATUSES.ON_HOLD]: "watching",
   [LIBRARY_STATUSES.DROPPED]: "watching",
   [LIBRARY_STATUSES.COMPLETED]: "completed",
-  [LIBRARY_STATUSES.REWATCHING]: "watching",
 });
 
 export function createDefaultAnimeLibraryState(now = Date.now()) {
@@ -175,25 +173,10 @@ export function createSyncPlan(resumeState, libraryState, settings) {
             ...basePayload.myAnimeList,
             status: "completed",
             num_watched_episodes: null,
-            is_rewatching: false,
           },
         },
       });
 
-    case LIBRARY_STATUSES.REWATCHING:
-      return createPlan({
-        code: "update_rewatch",
-        tone: "ready",
-        label: "Update rewatch",
-        summary: "Keep rewatching status and update progress.",
-        payload: {
-          ...basePayload,
-          myAnimeList: {
-            ...basePayload.myAnimeList,
-            is_rewatching: true,
-          },
-        },
-      });
 
     default:
       return createPlan({
@@ -206,14 +189,7 @@ export function createSyncPlan(resumeState, libraryState, settings) {
   }
 }
 
-export function getLibraryStatusLabel(status) {
-  return (
-    LIBRARY_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
-    "Unknown"
-  );
-}
-
-export function isKnownLibraryStatus(value) {
+function isKnownLibraryStatus(value) {
   return Object.values(LIBRARY_STATUSES).includes(value);
 }
 
@@ -230,7 +206,6 @@ function createProviderPayload(
     myAnimeList: {
       status: malStatus,
       num_watched_episodes: watchedEpisode,
-      is_rewatching: libraryState.listStatus === LIBRARY_STATUSES.REWATCHING,
       score: libraryState.score,
     },
     local: {

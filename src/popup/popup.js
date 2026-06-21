@@ -1,12 +1,12 @@
 import { sendMessage, MESSAGE_TYPES } from "../messaging.js";
 import { LIBRARY_STATUS_OPTIONS } from "../sync-policy.js";
 import {
+  TRACKER_SCRIPT_FILE,
   createOriginPattern,
   getDisplayHost,
   normalizeTrackableOrigin,
 } from "../tracked-sites.js";
 
-const TRACKER_SCRIPT_FILE = "src/content/videoTracker.js";
 const FALLBACK_COVER_URL = "../../assets/icons/SE148.png";
 
 const elements = {
@@ -210,13 +210,18 @@ function shouldWarmMatchCache() {
       (!Array.isArray(state.myAnimeList?.candidates) ||
         state.myAnimeList.candidates.length === 0),
   );
+  const hasStaleMatchedResumeState = popupState.resumeStates.some(
+    (state) =>
+      Number.isInteger(state.libraryState?.mediaId) &&
+      !Number.isInteger(state.libraryState?.numWatchedEpisodes),
+  );
   const currentPageNeedsMatch =
     popupState.currentInspection?.isEpisodePage === true &&
     popupState.currentInspection?.sourceTitle &&
     (!Array.isArray(popupState.currentPageMatches?.candidates) ||
       popupState.currentPageMatches.candidates.length === 0);
 
-  return hasUnmatchedResumeState || currentPageNeedsMatch;
+  return hasUnmatchedResumeState || hasStaleMatchedResumeState || currentPageNeedsMatch;
 }
 
 function renderMyAnimeList(myAnimeList, settings) {
@@ -753,6 +758,11 @@ function createMyAnimeListMatches(state) {
   const candidates = Array.isArray(state.myAnimeList?.candidates)
     ? state.myAnimeList.candidates
     : [];
+
+  if (shouldSuppressMyAnimeListCandidates(state, candidates)) {
+    return wrapper;
+  }
+
   const visibleCandidates = getVisibleMyAnimeListCandidates(state, candidates);
 
   if (visibleCandidates.length === 0) {
@@ -767,6 +777,18 @@ function createMyAnimeListMatches(state) {
   }
 
   return wrapper;
+}
+
+function shouldSuppressMyAnimeListCandidates(state, candidates) {
+  if (Number.isInteger(state.libraryState?.mediaId)) {
+    return true;
+  }
+
+  return (
+    candidates.length === 1 &&
+    Number.isInteger(candidates[0]?.matchConfidence) &&
+    candidates[0].matchConfidence >= 98
+  );
 }
 
 function getVisibleMyAnimeListCandidates(state, candidates) {
@@ -1336,10 +1358,10 @@ function inspectCurrentPageForShiori() {
 
     const withoutWatchPrefix = withoutSiteSuffix.replace(/^watch\s+/i, "");
     const withoutEpisode = withoutWatchPrefix
-      .replace(/\bepisode\s+\d+(\.\d+)?\b/gi, "")
-      .replace(/\bep\.?\s*\d+(\.\d+)?\b/gi, "")
-      .replace(/\s+-\s*\d{1,4}\s*$/i, "")
-      .replace(/\s+-\s*\d{1,4}\s+online\b/i, "")
+      .replace(/\bepisode\s+\d+(\.\d+)?(?:v\d+)?\b/gi, "")
+      .replace(/\bep\.?\s*\d+(\.\d+)?(?:v\d+)?\b/gi, "")
+      .replace(/\s+-\s*\d{1,4}(?:v\d+)?\s*$/i, "")
+      .replace(/\s+-\s*\d{1,4}(?:v\d+)?\s+online\b/i, "")
       .replace(/\s+online\b/gi, "");
 
     return cleanWhitespace(withoutEpisode) || cleanWhitespace(value) || location.hostname;
@@ -1375,7 +1397,7 @@ function inspectCurrentPageForShiori() {
 
       const decodedValue = safeDecode(value);
       const match = decodedValue.match(
-        /(?:episode|ep\.?|[^\p{L}\p{N}]e)\s*0*(\d{1,4})(?:\D|$)|(?:^|[-_\s.])0*(\d{1,4})(?=\s+online\b|[-_\s.]*(?:\d{3,4}p|subsplease|$))/iu,
+        /(?:episode|ep\.?|[^\p{L}\p{N}]e)\s*0*(\d{1,4})(?:\D|$)|(?:^|[-_\s.])0*(\d{1,4})(?:v\d+)?(?=\s+online\b|[-_\s.]*(?:\d{3,4}p|subsplease|$))/iu,
       );
 
       if (!match) {
@@ -1621,11 +1643,24 @@ function createSyncPayloadText(state) {
     return "Choose the correct MAL result to sync this entry.";
   }
 
-  return `MAL status: ${formatListStatus(
-    myAnimeList.status,
-  )}. Watched episodes: ${formatNullableEpisode(
-    myAnimeList.num_watched_episodes,
-  )}.`;
+  const status = state.libraryState?.malStatus ?? myAnimeList.status;
+  const currentProgress = formatEpisodeProgress(
+    state.libraryState?.numWatchedEpisodes,
+    state.libraryState?.numEpisodes,
+  );
+  const nextWatchedEpisode = myAnimeList.num_watched_episodes;
+  const nextSync = Number.isInteger(nextWatchedEpisode)
+    ? `Next sync: set watched episodes to ${nextWatchedEpisode}.`
+    : "Next sync: waiting for completion threshold.";
+
+  return `MAL: ${formatListStatus(status)} | Watched: ${currentProgress}. ${nextSync}`;
+}
+
+function formatEpisodeProgress(watchedEpisodes, totalEpisodes) {
+  const watched = Number.isInteger(watchedEpisodes) ? watchedEpisodes : "unknown";
+  const total = Number.isInteger(totalEpisodes) && totalEpisodes > 0 ? totalEpisodes : "?";
+
+  return `${watched} / ${total} eps`;
 }
 
 function createMyAnimeListMeta(candidate) {
@@ -1672,10 +1707,6 @@ function formatListStatus(status) {
     default:
       return "Not in list";
   }
-}
-
-function formatNullableEpisode(value) {
-  return Number.isInteger(value) && value > 0 ? String(value) : "pending";
 }
 
 function getUrlHost(value) {

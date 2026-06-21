@@ -509,10 +509,10 @@
 
     const withoutWatchPrefix = withoutSiteSuffix.replace(/^watch\s+/i, "");
     const withoutEpisode = withoutWatchPrefix
-      .replace(/\bepisode\s+\d+(\.\d+)?\b/gi, "")
-      .replace(/\bep\.?\s*\d+(\.\d+)?\b/gi, "")
-      .replace(/\s+-\s*\d{1,4}\s*$/i, "")
-      .replace(/\s+-\s*\d{1,4}\s+online\b/i, "")
+      .replace(/\bepisode\s+\d+(\.\d+)?(?:v\d+)?\b/gi, "")
+      .replace(/\bep\.?\s*\d+(\.\d+)?(?:v\d+)?\b/gi, "")
+      .replace(/\s+-\s*\d{1,4}(?:v\d+)?\s*$/i, "")
+      .replace(/\s+-\s*\d{1,4}(?:v\d+)?\s+online\b/i, "")
       .replace(/\s+online\b/gi, "");
 
     return cleanWhitespace(withoutEpisode) || cleanWhitespace(value) || location.hostname;
@@ -526,7 +526,7 @@
 
       const decodedValue = safeDecode(value);
       const match = decodedValue.match(
-        /(?:episode|ep\.?|[^\p{L}\p{N}]e)\s*0*(\d{1,4})(?:\D|$)|(?:^|[-_\s.])0*(\d{1,4})(?=\s+online\b|[-_\s.]*(?:\d{3,4}p|subsplease|$))/iu,
+        /(?:episode|ep\.?|[^\p{L}\p{N}]e)\s*0*(\d{1,4})(?:\D|$)|(?:^|[-_\s.])0*(\d{1,4})(?:v\d+)?(?=\s+online\b|[-_\s.]*(?:\d{3,4}p|subsplease|$))/iu,
       );
 
       if (!match) {
@@ -734,17 +734,30 @@
   }
 
   function sendMessage(type, payload = null) {
-    return chrome.runtime
-      .sendMessage({
-        type,
-        payload,
-      })
-      .then((response) => {
+    if (
+      !globalThis.chrome?.runtime?.id ||
+      typeof chrome.runtime.sendMessage !== "function"
+    ) {
+      return Promise.reject(
+        new Error("Shiori extension context is no longer available."),
+      );
+    }
+
+    try {
+      return Promise.resolve(
+        chrome.runtime.sendMessage({
+          type,
+          payload,
+        }),
+      ).then((response) => {
         if (!response?.ok) {
           throw new Error(response?.error?.message ?? "Shiori message failed.");
         }
 
         return response.data;
       });
+    } catch (error) {
+      return Promise.reject(error);
+    }
   }
 })();

@@ -1,3 +1,4 @@
+import { MESSAGE_TYPES } from "./messaging.js";
 import { getSettings, updateSettings, resetSettings } from "./settings.js";
 import {
   connectMyAnimeList,
@@ -24,31 +25,6 @@ import {
   normalizeTrackedSites,
 } from "./tracked-sites.js";
 
-const MESSAGE_TYPES = Object.freeze({
-  HEALTH_CHECK: "HEALTH_CHECK",
-
-  GET_SETTINGS: "GET_SETTINGS",
-  UPDATE_SETTINGS: "UPDATE_SETTINGS",
-  RESET_SETTINGS: "RESET_SETTINGS",
-
-  SAVE_RESUME_STATE: "SAVE_RESUME_STATE",
-  REGISTER_PAGE_CONTEXT: "REGISTER_PAGE_CONTEXT",
-  GET_PAGE_CONTEXT: "GET_PAGE_CONTEXT",
-  GET_RESUME_STATES: "GET_RESUME_STATES",
-  CLEAR_RESUME_STATE: "CLEAR_RESUME_STATE",
-  UPDATE_ANIME_LIBRARY_STATE: "UPDATE_ANIME_LIBRARY_STATE",
-
-  GET_MY_ANIME_LIST_STATUS: "GET_MY_ANIME_LIST_STATUS",
-  CONNECT_MY_ANIME_LIST: "CONNECT_MY_ANIME_LIST",
-  DISCONNECT_MY_ANIME_LIST: "DISCONNECT_MY_ANIME_LIST",
-  SYNC_RESUME_STATE_TO_MY_ANIME_LIST: "SYNC_RESUME_STATE_TO_MY_ANIME_LIST",
-
-  GET_TRACKED_SITES: "GET_TRACKED_SITES",
-  ENABLE_TRACKED_SITE: "ENABLE_TRACKED_SITE",
-  DISABLE_TRACKED_SITE: "DISABLE_TRACKED_SITE",
-
-  SEARCH_MY_ANIME_LIST: "SEARCH_MY_ANIME_LIST",
-});
 
 const STORAGE_KEYS = Object.freeze({
   RESUME_STATES: "shiori.resumeStates",
@@ -351,10 +327,14 @@ async function handleGetResumeStates(payload = null) {
     stored[STORAGE_KEYS.RESUME_STATES] ?? {},
     libraryStates,
   );
-  const resumeStates = repairResult.resumeStates;
-  const nextLibraryStates = repairResult.libraryStates;
+  const dedupeResult = dedupeResumeStateStores(
+    repairResult.resumeStates,
+    repairResult.libraryStates,
+  );
+  const resumeStates = dedupeResult.resumeStates;
+  const nextLibraryStates = dedupeResult.libraryStates;
 
-  if (repairResult.changed) {
+  if (repairResult.changed || dedupeResult.changed) {
     await chrome.storage.local.set({
       [STORAGE_KEYS.RESUME_STATES]: resumeStates,
       [STORAGE_KEYS.ANIME_LIBRARY_STATES]: nextLibraryStates,
@@ -705,17 +685,14 @@ async function repairResumeStatesWithPageContexts(resumeStates, libraryStates) {
       continue;
     }
 
-    const context = contexts[resumeState?.episodeUrl];
-
-    if (!context) {
-      continue;
-    }
-
+    const context = contexts[resumeState?.episodeUrl] ?? null;
     const identity = parseAnimeIdentity([
-      context.titleCandidates,
-      context.sourceTitle,
-      context.pageTitle,
+      context?.titleCandidates,
+      context?.sourceTitle,
+      context?.pageTitle,
       resumeState.sourceTitle,
+      resumeState.pageTitle,
+      resumeState.episodeUrl,
     ]);
 
     if (!identity.reliable || !identity.title) {
@@ -724,14 +701,14 @@ async function repairResumeStatesWithPageContexts(resumeStates, libraryStates) {
 
     const nextResumeState = {
       ...resumeState,
-      site: context.site ?? resumeState.site,
-      siteOrigin: context.siteOrigin ?? resumeState.siteOrigin,
+      site: context?.site ?? resumeState.site,
+      siteOrigin: context?.siteOrigin ?? resumeState.siteOrigin,
       sourceTitle: identity.title,
       normalizedTitle: normalizeTitle(identity.title),
       episodeNumber:
-        resumeState.episodeNumber ?? identity.episodeNumber ?? context.episodeNumber,
-      pageTitle: context.pageTitle ?? resumeState.pageTitle,
-      siteIconUrl: context.siteIconUrl ?? resumeState.siteIconUrl,
+        identity.episodeNumber ?? resumeState.episodeNumber ?? context?.episodeNumber,
+      pageTitle: context?.pageTitle ?? resumeState.pageTitle,
+      siteIconUrl: context?.siteIconUrl ?? resumeState.siteIconUrl,
     };
     const nextResumeKey = createResumeKey(nextResumeState);
 
@@ -744,11 +721,24 @@ async function repairResumeStatesWithPageContexts(resumeStates, libraryStates) {
       continue;
     }
 
-    delete nextResumeStates[resumeKey];
-    nextResumeStates[nextResumeKey] = nextResumeState;
+    const existingState = nextResumeStates[nextResumeKey];
 
-    if (nextLibraryStates[resumeKey] && !nextLibraryStates[nextResumeKey]) {
-      nextLibraryStates[nextResumeKey] = nextLibraryStates[resumeKey];
+    delete nextResumeStates[resumeKey];
+
+    if (existingState) {
+      const winnerState = chooseBetterResumeState(existingState, nextResumeState);
+      const loserState = winnerState === existingState ? nextResumeState : existingState;
+      nextResumeStates[nextResumeKey] = mergeResumeStates(winnerState, loserState);
+      nextLibraryStates[nextResumeKey] = mergeAnimeLibraryStates(
+        nextLibraryStates[nextResumeKey],
+        nextLibraryStates[resumeKey],
+      );
+    } else {
+      nextResumeStates[nextResumeKey] = nextResumeState;
+
+      if (nextLibraryStates[resumeKey] && !nextLibraryStates[nextResumeKey]) {
+        nextLibraryStates[nextResumeKey] = nextLibraryStates[resumeKey];
+      }
     }
 
     delete nextLibraryStates[resumeKey];
@@ -760,6 +750,117 @@ async function repairResumeStatesWithPageContexts(resumeStates, libraryStates) {
     libraryStates: nextLibraryStates,
     changed,
   };
+}
+
+function dedupeResumeStateStores(resumeStates, libraryStates) {
+  const nextResumeStates = { ...resumeStates };
+  const nextLibraryStates = { ...libraryStates };
+  const bestKeyByMediaId = new Map();
+  let changed = false;
+
+  for (const [resumeKey, resumeState] of Object.entries(resumeStates)) {
+    if (!nextResumeStates[resumeKey]) {
+      continue;
+    }
+
+    const libraryState = normalizeAnimeLibraryState(nextLibraryStates[resumeKey]);
+
+    if (!Number.isInteger(libraryState.mediaId)) {
+      continue;
+    }
+
+    const mediaKey = String(libraryState.mediaId);
+    const currentBestKey = bestKeyByMediaId.get(mediaKey);
+
+    if (!currentBestKey || !nextResumeStates[currentBestKey]) {
+      bestKeyByMediaId.set(mediaKey, resumeKey);
+      continue;
+    }
+
+    const bestState = nextResumeStates[currentBestKey];
+    const winnerState = chooseBetterResumeState(bestState, resumeState);
+    const winnerKey = winnerState === bestState ? currentBestKey : resumeKey;
+    const loserKey = winnerKey === currentBestKey ? resumeKey : currentBestKey;
+    const loserState = nextResumeStates[loserKey];
+
+    nextResumeStates[winnerKey] = mergeResumeStates(winnerState, loserState);
+    nextLibraryStates[winnerKey] = mergeAnimeLibraryStates(
+      nextLibraryStates[winnerKey],
+      nextLibraryStates[loserKey],
+    );
+
+    delete nextResumeStates[loserKey];
+    delete nextLibraryStates[loserKey];
+    bestKeyByMediaId.set(mediaKey, winnerKey);
+    changed = true;
+  }
+
+  return {
+    resumeStates: nextResumeStates,
+    libraryStates: nextLibraryStates,
+    changed,
+  };
+}
+
+function chooseBetterResumeState(left, right) {
+  const leftEpisode = normalizePositiveInteger(left?.episodeNumber) ?? 0;
+  const rightEpisode = normalizePositiveInteger(right?.episodeNumber) ?? 0;
+
+  if (leftEpisode !== rightEpisode) {
+    return leftEpisode > rightEpisode ? left : right;
+  }
+
+  const leftUpdatedAt = typeof left?.updatedAt === "number" ? left.updatedAt : 0;
+  const rightUpdatedAt = typeof right?.updatedAt === "number" ? right.updatedAt : 0;
+
+  if (leftUpdatedAt !== rightUpdatedAt) {
+    return leftUpdatedAt > rightUpdatedAt ? left : right;
+  }
+
+  const leftProgress = typeof left?.progressRatio === "number" ? left.progressRatio : 0;
+  const rightProgress = typeof right?.progressRatio === "number" ? right.progressRatio : 0;
+
+  return leftProgress >= rightProgress ? left : right;
+}
+
+function mergeResumeStates(primaryState, secondaryState) {
+  return {
+    ...secondaryState,
+    ...primaryState,
+    posterUrl: primaryState?.posterUrl ?? secondaryState?.posterUrl ?? null,
+    siteIconUrl: primaryState?.siteIconUrl ?? secondaryState?.siteIconUrl ?? null,
+    updatedAt: Math.max(primaryState?.updatedAt ?? 0, secondaryState?.updatedAt ?? 0),
+  };
+}
+
+function mergeAnimeLibraryStates(primaryState, secondaryState) {
+  if (!primaryState) {
+    return normalizeAnimeLibraryState(secondaryState);
+  }
+
+  if (!secondaryState) {
+    return normalizeAnimeLibraryState(primaryState);
+  }
+
+  const primary = normalizeAnimeLibraryState(primaryState);
+  const secondary = normalizeAnimeLibraryState(secondaryState);
+  const watchedEpisodes = [primary.numWatchedEpisodes, secondary.numWatchedEpisodes]
+    .filter((value) => Number.isInteger(value) && value >= 0);
+
+  return normalizeAnimeLibraryState({
+    mediaId: primary.mediaId ?? secondary.mediaId,
+    listStatus:
+      primary.listStatus !== "unknown" ? primary.listStatus : secondary.listStatus,
+    score: primary.score ?? secondary.score,
+    matchedTitle: primary.matchedTitle ?? secondary.matchedTitle,
+    coverUrl: primary.coverUrl ?? secondary.coverUrl,
+    numEpisodes: primary.numEpisodes ?? secondary.numEpisodes,
+    numWatchedEpisodes:
+      watchedEpisodes.length > 0 ? Math.max(...watchedEpisodes) : null,
+    malStatus: primary.malStatus ?? secondary.malStatus,
+    userConfirmedMatch: primary.userConfirmedMatch || secondary.userConfirmedMatch,
+    updatedAt: Math.max(primary.updatedAt ?? 0, secondary.updatedAt ?? 0),
+  });
 }
 
 async function ensureAnimeLibraryState(resumeKey) {
@@ -993,15 +1094,21 @@ async function enrichResumeStatesWithMyAnimeList(
         candidates,
         nextLibraryStates,
       );
+      const refreshedLibraryState = refreshSelectedLibraryStateFromCandidates(
+        state,
+        candidates,
+        nextLibraryStates,
+      );
+      const nextLibraryState = autoMatchedLibraryState ?? refreshedLibraryState;
 
-      if (autoMatchedLibraryState) {
-        nextLibraryStates[state.resumeKey] = autoMatchedLibraryState;
+      if (nextLibraryState) {
+        nextLibraryStates[state.resumeKey] = nextLibraryState;
         libraryChanged = true;
       }
 
       enrichedStates.push({
         ...state,
-        libraryState: autoMatchedLibraryState ?? state.libraryState,
+        libraryState: nextLibraryState ?? state.libraryState,
         myAnimeList: {
           connected: true,
           candidates,
@@ -1064,6 +1171,31 @@ function createLibraryStateFromMyAnimeListAnime(anime) {
     score: anime.myListStatus?.score ?? null,
     userConfirmedMatch: true,
   };
+}
+
+function refreshSelectedLibraryStateFromCandidates(state, candidates, libraryStates) {
+  const currentState = normalizeAnimeLibraryState(
+    libraryStates[state.resumeKey] ?? state.libraryState,
+  );
+
+  if (!Number.isInteger(currentState.mediaId) || !Array.isArray(candidates)) {
+    return null;
+  }
+
+  const selectedCandidate = candidates.find(
+    (candidate) => candidate?.id === currentState.mediaId,
+  );
+
+  if (!selectedCandidate) {
+    return null;
+  }
+
+  return normalizeAnimeLibraryState({
+    ...currentState,
+    ...createLibraryStateFromMyAnimeListAnime(selectedCandidate),
+    userConfirmedMatch: currentState.userConfirmedMatch,
+    updatedAt: Date.now(),
+  });
 }
 
 function createAutoMatchedLibraryState(state, candidates, libraryStates) {
@@ -1237,15 +1369,24 @@ function normalizeResumeState(payload, sender) {
   }
 
   const site = requireNonEmptyString(payload.site, "site");
-  const sourceTitle = requireNonEmptyString(payload.sourceTitle, "sourceTitle");
+  const rawSourceTitle = requireNonEmptyString(payload.sourceTitle, "sourceTitle");
   const episodeUrl = requireNonEmptyString(payload.episodeUrl, "episodeUrl");
+  const identity = parseAnimeIdentity([
+    payload.titleCandidates,
+    rawSourceTitle,
+    payload.pageTitle,
+    episodeUrl,
+    sender?.tab?.title,
+  ]);
+  const sourceTitle =
+    identity.reliable && identity.title ? identity.title : rawSourceTitle;
   const siteOrigin =
     normalizeTrackableOrigin(payload.siteOrigin) ??
     normalizeTrackableOrigin(sender?.url) ??
     normalizeTrackableOrigin(sender?.tab?.url);
 
   const episodeNumber = requireOptionalPositiveInteger(
-    payload.episodeNumber,
+    payload.episodeNumber ?? identity.episodeNumber,
     "episodeNumber",
   );
 

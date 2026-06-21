@@ -265,7 +265,7 @@ export async function syncResumeStateToMyAnimeList({
   };
 }
 
-export function createMyAnimeListUpdate({
+function createMyAnimeListUpdate({
   currentStatus,
   score,
   episodeNumber,
@@ -697,7 +697,6 @@ function normalizeCachedMyListStatus(value) {
     status: normalizeListStatus(value.status),
     score: normalizeScore(value.score),
     numEpisodesWatched: normalizeNonNegativeInteger(value.numEpisodesWatched),
-    isRewatching: value.isRewatching === true,
   };
 }
 
@@ -791,7 +790,6 @@ function normalizeMyListStatus(value) {
     numEpisodesWatched: normalizeNonNegativeInteger(
       value.num_episodes_watched,
     ),
-    isRewatching: value.is_rewatching === true,
   };
 }
 
